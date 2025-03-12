@@ -1,29 +1,18 @@
-on:
-  push:
-     branches:
-       - main
+on: [push, pull_request]
 
-name: Deploy template app to shinyapps.io
+name: deploy-shiny
 
 jobs:
   deploy-shiny:
-    name: Deploy to shinyapps.io
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_PAT: ${{ secrets.ACCESS_TOKEN }}
-      ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        
+    runs-on: macOS-latest
     steps:
-       - name: 🛎️ Checkout repository
-         uses: actions/checkout@v2
-         with:
-           fetch-depth: 0
-       - id: deploy
-         name: ShinyApps.io deploy
-         uses: qwert666/shinyapps-actions@v1.0
-         env:
-           SHINY_USERNAME: 'gajanenadovic' # put your SHINY username here!
-           SHINY_TOKEN: ${{ secrets.TOKEN }}
-           SHINY_SECRET: ${{ secrets.SECRET }}
-           APP_NAME: 'UL_vpis_2324' # this will show in the app's url
-           APP_DIR: ''
+      - uses: actions/checkout@v2
+      - uses: r-lib/actions/setup-r@master
+      - name: Install shiny
+        run: |
+          install.packages(c("shiny", "rsconnect"), type = "binary")
+        shell: Rscript {0}
+      - name: Push to shiny.io
+        run: |
+          Rscript -e "rsconnect::setAccountInfo(name='gajanenadovic', token=${{secrets.SHINYAPPS_TOKEN}}, secret=${{secrets.SHINYAPPS_SECRET}})"
+          Rscript -e "rsconnect::deployApp(appName = 'app')"
