@@ -1,3 +1,4 @@
+library(rsconnect)
 library(data.table)
 library(plotly)
 library(shiny)
