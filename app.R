@@ -43,7 +43,7 @@ si <- list(
   "sInfoFiltered" = "(filtrirano od _MAX_ vseh zapisov)",
   "sInfoPostFix" = "",
   "sInfoThousands" = ",",
-  "sLengthMenu" = "Prikaži _MENU_",
+  "sLengthMenu" = "Prikaži _MENU_ zapisov",
   "sLoadingRecords" = "Nalagam...",
   "sProcessing" = "Obdelujem...",
   "sSearch" = '<i class="fas fa-search" aria-hidden="true"></i>',
@@ -91,6 +91,7 @@ ui <- navbarPage(#includeScript("code.js"),
                  title = "Vpisani študentje 23/24",
                  
                  tags$head(tags$style(HTML("
+                            
                             a {
                               color: #E03127;
                             }
@@ -104,12 +105,12 @@ ui <- navbarPage(#includeScript("code.js"),
                               background-color: #babbbc;
                               border-color: #babbbc;
                             }
-
+                            
                                                         "))),
                  #title = "Podatki o vpisanih študentih 2023/2024",
                  nav_panel("Tabela",
-                          fluidRow(
-                            column(4,
+                          fixedRow(
+                            column(12,
                           wellPanel(
                             "Pri vsaki spremenljivki izberi kategorije, za katere te zanima število vpisanih študentov. Če ne izbereš nobene
                             kategorije se število vpisanih ne bo razčlenilo glede na kategorije te spremenljivke.",
@@ -233,10 +234,13 @@ ui <- navbarPage(#includeScript("code.js"),
                                 )
                               ) 
                             
-                          )),
-                          column(8, mainPanel(DT::dataTableOutput("mytable1"))),
-                          verbatimTextOutput("lala")
-                 )),
+                          ))),
+                          div(style = "height:50px"),
+                          fluidRow(
+                          column(12, 
+                                 div(DT::dataTableOutput("mytable1"),
+                          style = 'horizontal-align: middle;')
+                 ))),
                  
                  nav_panel("Graf",
                           wellPanel(
@@ -297,11 +301,14 @@ server <- function(input, output){
                         Način %in% fltrs$Način &
                         Letnik %in% fltrs$Letnik &
                         Državljanstvo %in% fltrs$Državljanstvo, 
-                      list("Št. študentov" = sum(UTEZ)), 
+                      list("Število študentov" = sum(UTEZ)), 
                       by=by_vars],
-                  options = list(
-                    language = si
-                  ))
+                    options = list(
+                      language = si
+                    )
+    )
+    
+                  
   })
   
   output$mygraph1 <- renderPlotly({
@@ -349,8 +356,6 @@ server <- function(input, output){
     ggplotly(p) 
     
   }) 
-  
-  output$lala <- renderText(input$PČ)
   
   
   
