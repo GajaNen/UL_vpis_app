@@ -1,28 +1,34 @@
-name: Deploy to shinyapps.io
+name: Run on push master, main
+
+# Controls when the action will run. 
 on:
-
-  # run on any push 
+  # Triggers the workflow on push or pull request events but only for the main branch
   push:
+    branches: [ main, master ]
 
-  # run on request (via button in actions menu)
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-      
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  deploy:
-    name: Deploy to shinyapps
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: Ubuntu-20.04
 
-    # allow skipping deployment for commits containing '[automated]' or '[no-deploy]' in the commit message
-    if: "!contains(github.event.head_commit.message, '[automated]') && !contains(github.event.head_commit.message, '[no-deploy]')"
-    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: deploy
-        uses: BDSI-Utwente/shinyapps-deploy-github-action@v1
-        with:
-          # account and application name (https://<accountName>.shinyapps.io/<appName>)
-          appName: UL_vpis_app
-          accountName: gajanenadovic
 
-          # token and secret obtained from https://www.shinyapps.io/admin/#/tokens
-          accountToken: ${{ secrets.SHINYAPPS_TOKEN }}
-          accountSecret: ${{ secrets.SHINYAPPS_SECRET }}
+      # build the docker image and give it the name main
+      - name: Build image
+        run: docker build -t main . 
+      # run the docker image supply the secrets from the github secrets store.  
+      - name: execute
+        run: >
+          docker run 
+          -e SHINY_ACC_NAME=${{ secrets.SHINY_ACC_NAME }} 
+          -e TOKEN=${{secrets.TOKEN}} 
+          -e SECRET=${{secrets.SECRET}} 
+          main          
