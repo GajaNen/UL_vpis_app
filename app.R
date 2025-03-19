@@ -1,6 +1,6 @@
 library(data.table)
 library(plotly)
-library(shiny)
+#library(shiny)
 library(reshape2)
 library(shinyWidgets)
 library(DT)
