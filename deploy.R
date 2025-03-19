@@ -3,4 +3,5 @@ rsconnect::setAccountInfo(name = Sys.getenv("SHINY_ACC_NAME"),
                token = Sys.getenv("TOKEN"),
                secret = Sys.getenv("SECRET"))
 # Deploy
-rsconnect::deployApp(appFiles = c("app.R", "data_final.csv", "js4checkbox.js"))
+rsconnect::deployApp(appFiles = c("app.R", "data_final.csv", "js4checkbox.js"),
+                    forceUpdate = T)
