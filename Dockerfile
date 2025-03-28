@@ -3,7 +3,7 @@ RUN install2.r rsconnect data.table plotly shiny reshape2 shinyWidgets DT bslib 
 RUN R -e 'remotes::install_github("dreamRs/shinytreeview")'
 WORKDIR /home/UL_vpis_2324
 COPY app.R app.R
-COPY UL_logo-RGB_barv.png UL_logo-RGB_barv.png
+COPY www/UL_logo-RGB_barv.png www/UL_logo-RGB_barv.png
 COPY js4checkbox.js js4checkbox.js
 COPY data_final.csv data_final.csv
 COPY deploy.R deploy.R
