@@ -147,6 +147,7 @@ ui <- navbarPage(
 
                  nav_panel("Tabela",
                            #includeScript("jsSelectAllSubcat.js"),
+                           tags$script(js),
                           fixedRow(
                             column(12,
                           wellPanel(
@@ -178,7 +179,7 @@ ui <- navbarPage(
                                     )
                                   ) |> 
                                   bs_append(
-                                    tags$script(js),
+                                    
                                     title = "Program",
                                     content = conditionalPanel(
                                       condition = "output.Prog == true",
@@ -186,13 +187,7 @@ ui <- navbarPage(
                                         inputId = "Program", 
                                         label = "Izberi program/e:",
                                         choices = list(),
-                                        options = list(`actions-box` = TRUE,
-                                                       `liveSearch` = TRUE,
-                                                       `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                       `select-all-text` = "Izberi Vse",
-                                                       `none-selected-text` = "Skupaj",
-                                                       `all-selected-text` = "Vse"
-                                        ),
+                                        
                                         selected = NULL,
                                         multiple = TRUE
                                       )
@@ -386,6 +381,13 @@ server <- function(input, output, session){
                              ),
                              selected = NULL
                              )
+  })
+  
+  observeEvent(input$group_select, {
+    req(input$group_select)
+    updatePickerInput(session, 
+                      "Program", 
+                      selected = dat[Članica %in% input$group_select, Program])
   })
   
   output$mytable1 <- DT::renderDataTable({
