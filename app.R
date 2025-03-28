@@ -8,30 +8,6 @@ library(bslib)
 library(bsplus)
 library(shinytreeview)
 
-js <- HTML("
-$(function() {
-  let observer = new MutationObserver(callback);
-
-  function clickHandler(evt) {
-    Shiny.setInputValue('group_select', $(this).children('span').text());
-  }
-
-  function callback(mutations) {
-    for (let mutation of mutations) {
-      if (mutation.type === 'childList') {
-        $('.dropdown-header').on('click', clickHandler).css('cursor', 'pointer');
-        
-      }
-    }
-  }
-
-  let options = {
-    childList: true,
-  };
-
-  observer.observe($('.inner')[0], options);
-})
-")
 
 cvi_colours = list(
   ul = c("#E03127", "#e1e1e2", "#c4c4c5", 
@@ -106,11 +82,6 @@ letnikVec <- c("Prvi" = "01", "Drugi" = "02",
                "Peti" = "05", "Šesti"= "06", 
                "Absolventi" = "0A")
 
-# a to dejansko prekodira ravni glede na podan vrstni red???
-
-
-###########################
-
 ui <- navbarPage(
                  theme = bs_theme(version = 4, bootswatch = 'minty',
                                   primary = "#58595b", secondary = "#E03127",
@@ -146,8 +117,6 @@ ui <- navbarPage(
                            ),
 
                  nav_panel("Tabela",
-                           #includeScript("jsSelectAllSubcat.js"),
-                           tags$script(js),
                           fixedRow(
                             column(12,
                           wellPanel(
@@ -381,13 +350,6 @@ server <- function(input, output, session){
                              ),
                              selected = NULL
                              )
-  })
-  
-  observeEvent(input$group_select, {
-    req(input$group_select)
-    updatePickerInput(session, 
-                      "Program", 
-                      selected = dat[Članica %in% input$group_select, Program])
   })
   
   output$mytable1 <- DT::renderDataTable({
