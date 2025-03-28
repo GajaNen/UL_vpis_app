@@ -8,17 +8,43 @@ library(bslib)
 library(bsplus)
 library(shinytreeview)
 
+js <- HTML("
+$(function() {
+  let observer = new MutationObserver(callback);
+
+  function clickHandler(evt) {
+    Shiny.setInputValue('group_select', $(this).children('span').text());
+  }
+
+  function callback(mutations) {
+    for (let mutation of mutations) {
+      if (mutation.type === 'childList') {
+        $('.dropdown-header').on('click', clickHandler).css('cursor', 'pointer');
+        
+      }
+    }
+  }
+
+  let options = {
+    childList: true,
+  };
+
+  observer.observe($('.inner')[0], options);
+})
+")
+
 cvi_colours = list(
-  cvi_purples = c("#381532", "#4b1b42", "#5d2252", "#702963",
-                  "#833074", "#953784", "#a83e95"),
-  my_favourite_colours = c("#702963", "#637029",    "#296370"),
   ul = c("#E03127", "#e1e1e2", "#c4c4c5", 
          "#a8a8a9", "#8c8d8e", "#717274", 
          "#58595b", "#494a4c", "#3b3c3d",
          "#2d2e2f", "#202121", "#141414")
 )
 
-cvi_palettes = function(name, n, all_palettes = cvi_colours, type = c("discrete", "continuous")) {
+cvi_palettes = function(name, 
+                        n, 
+                        all_palettes = cvi_colours, 
+                        type = c("discrete", "continuous")
+                        ) {
   palette = all_palettes[[name]]
   if (missing(n)) {
     n = length(palette)
@@ -72,25 +98,33 @@ plotVec <- c("Članica" = "Kratica",
              "Način" = "Način", 
              "Letnik" = "Letnik")
 
-tabVec <- c("Članica" = "Članica",
-             "Spol" = "Spol", 
-            "Stopnja" = "Stopnja", 
-            "Način" = "Način", 
-            "Letnik" = "Letnik", 
-             "Državljanstvo" = "Državljanstvo")
+tabVec <- c("Članica", "Program", "Členitev", "Spol", 
+            "Stopnja", "Način", "Letnik", "Državljanstvo")
 
 letnikVec <- c("Prvi" = "01", "Drugi" = "02", 
                "Tretji" = "03", "Četrti" = "04",
                "Peti" = "05", "Šesti"= "06", 
                "Absolventi" = "0A")
 
-ui <- navbarPage(#includeScript("code.js"),
+# a to dejansko prekodira ravni glede na podan vrstni red???
+
+
+###########################
+
+ui <- navbarPage(
                  theme = bs_theme(version = 4, bootswatch = 'minty',
                                   primary = "#58595b", secondary = "#E03127",
                                   info = "#E03127"),
-                 title = "Vpisani študentje 23/24",
+                 
+                 title = div(img(src="UL_logo-RGB_barv.png", 
+                                 height="100px"), 
+                             "Vpisani študentje 23/24"),
                  
                  tags$head(tags$style(HTML("
+                 
+                            body {
+                              font-family: Arial;
+                           }
                             
                             a {
                               color: #E03127;
@@ -106,133 +140,170 @@ ui <- navbarPage(#includeScript("code.js"),
                               border-color: #babbbc;
                             }
                             
-                                                        "))),
-                 #title = "Podatki o vpisanih študentih 2023/2024",
+                                                        "
+                                           )
+                                      )
+                           ),
+
                  nav_panel("Tabela",
+                           #includeScript("jsSelectAllSubcat.js"),
                           fixedRow(
                             column(12,
                           wellPanel(
-                            "Pri vsaki spremenljivki izberi kategorije, za katere te zanima število vpisanih študentov. Če ne izbereš nobene
-                            kategorije se število vpisanih ne bo razčlenilo glede na kategorije te spremenljivke.",
-                            div(style = "height:20px"),
-                            #tags$head(tags$script(js)),
-                            bs_accordion(
-                              id = "accordion"
-                            )  |> 
-                              bs_set_opts(
-                                use_heading_link = TRUE
-                              ) |> 
-                              bs_append(
-                                title = "Članica",
-                                content = pickerInput(
-                                  inputId = "Članica", 
-                                  label = "Izberi članico/e:",
-                                  choices = as.vector(unique(dat$Članica)[order(unique(dat$Članica))]),
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = "Akademija za glasbo",
-                                  multiple = TRUE
-                                )
-                              ) |> 
-                              bs_append(
-                                title = "Program in členitev",
-                                content = checkboxGroupInput(
-                                  inputId = "PČ",
-                                  label = "Razčleni po:",
-                                  choices = c("Program", "Členitev")
+                            fluidRow(
+                              column(
+                                6,
+                                bs_accordion(
+                                  id = "accordion_left"
+                                )  |> 
+                                  bs_set_opts(
+                                    use_heading_link = TRUE
+                                  ) |> 
+                                  bs_append(
+                                    title = "Članica",
+                                    content = pickerInput(
+                                      inputId = "Članica", 
+                                      label = "Izberi članico/e:",
+                                      choices = sort(unique(dat$Članica)),
+                                      options = list(`actions-box` = TRUE,
+                                                     liveSearch = TRUE,
+                                                     liveSearchStyle = "contains",
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                                     ),
+                                      selected = "Akademija za glasbo",
+                                      multiple = TRUE
+                                    )
+                                  ) |> 
+                                  bs_append(
+                                    tags$script(js),
+                                    title = "Program",
+                                    content = conditionalPanel(
+                                      condition = "output.Prog == true",
+                                      pickerInput(
+                                        inputId = "Program", 
+                                        label = "Izberi program/e:",
+                                        choices = list(),
+                                        options = list(`actions-box` = TRUE,
+                                                       `liveSearch` = TRUE,
+                                                       `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                       `select-all-text` = "Izberi Vse",
+                                                       `none-selected-text` = "Skupaj",
+                                                       `all-selected-text` = "Vse"
+                                        ),
+                                        selected = NULL,
+                                        multiple = TRUE
+                                      )
+                                    )
+                                  ) |>
+                                  bs_append(
+                                    title = "Členitev",
+                                    content = conditionalPanel(
+                                      condition = "output.Clen == true",
+                                      pickerInput(
+                                        inputId = "Členitev", 
+                                        label = "Izberi členitev/e:",
+                                        choices = list(),
+                                        options = list(`actions-box` = TRUE,
+                                                       `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                       `select-all-text` = "Izberi Vse",
+                                                       `none-selected-text` = "Skupaj",
+                                                       `all-selected-text` = "Vse"
+                                        ),
+                                        selected = NULL,
+                                        multiple = TRUE
+                                      )
+                                    )
+                                  ) |>
+                                  bs_append(
+                                    title = "Način",
+                                    content = pickerInput(
+                                      inputId = "Način", label = "Izberi način  študija:",
+                                      choices = as.vector(unique(dat$`Način`)),
+                                      options = list(`actions-box` = TRUE,
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                      ),
+                                      selected = "REDNI",
+                                      multiple = TRUE
+                                    )
                                   )
-                              # bs_append(
-                              #   title = "Članica, program, členitev",
-                              #   content = treeInput(
-                              #     inputId = "PČ",
-                              #     label = "Izberi:",
-                              #     closeDepth = 0,
-                              #     choices = create_tree(
-                              #       dat, c("Članica", "Program", "Členitev")
-                              #     ),
-                              #     width = "100%"
-                              #   )
-                              ) |> 
-                              bs_append(
-                                title = "Način",
-                                content = pickerInput(
-                                  inputId = "Način", label = "Izberi način  študija:",
-                                  choices = as.vector(unique(dat$`Način`)),
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = "REDNI",
-                                  multiple = TRUE
+                                ),
+                                column(
+                                  6,
+                                  bs_accordion(
+                                    id = "accordion_right"
+                                  )  |> 
+                                    bs_set_opts(
+                                      use_heading_link = TRUE
+                                    ) |> 
+                                  bs_append(
+                                    title = "Stopnja",
+                                    content = pickerInput(
+                                      inputId = "Stopnja", label = "Izberi stopnjo študijskega programa:",
+                                      choices = unique(sort(dat$Stopnja)),
+                                      options = list(`actions-box` = TRUE,
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                                     ),
+                                      selected = "prva stopnja",
+                                      multiple = TRUE
+                                    )
+                                  ) |> 
+                                  bs_append(
+                                    title = "Letnik",
+                                    content = pickerInput(
+                                      inputId = "Letnik", 
+                                      label = "Izberi Letnik študentov_k:",
+                                      choices = unique(sort(dat$Letnik)),
+                                      options = list(`actions-box` = TRUE,
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                                     ),
+                                      selected = NULL,
+                                      multiple = TRUE
+                                    )
+                                  ) |> 
+                                  bs_append(
+                                    title = "Spol",
+                                    content = pickerInput(
+                                      inputId = "Spol", label = "Izberi spol študentov_k:",
+                                      choices = unique(dat$Spol),
+                                      options = list(`actions-box` = TRUE,
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                                     ),
+                                      selected = "Ž",
+                                      multiple = TRUE
+                                    )
+                                  ) |> 
+                                  bs_append(
+                                    title = "Državljanstvo",
+                                    content = pickerInput(
+                                      inputId = "Državljanstvo", label = "Izberi državljanstvo študentov_k:",
+                                      choices = as.vector(unique(dat$Državljanstvo)[order(unique(dat$Državljanstvo))]),
+                                      options = list(`actions-box` = TRUE,
+                                                     `deselect-all-text` = "Ne izberi nobene možnosti",
+                                                     `select-all-text` = "Izberi Vse",
+                                                     `none-selected-text` = "Skupaj",
+                                                     `all-selected-text` = "Vse"
+                                                     ),
+                                      selected = "SLOVENIJA",
+                                      multiple = TRUE
+                                    )
+                                  )
                                 )
-                              ) |> 
-                              bs_append(
-                                title = "Stopnja",
-                                content = pickerInput(
-                                  inputId = "Stopnja", label = "Izberi stopnjo študijskega programa:",
-                                  choices = as.vector(unique(dat$Stopnja)),
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = "prva stopnja",
-                                  multiple = TRUE
-                                )
-                              ) |> 
-                              bs_append(
-                                title = "Letnik",
-                                content = pickerInput(
-                                  inputId = "Letnik", 
-                                  label = "Izberi Letnik študentov_k:",
-                                  choices = unique(dat$Letnik)[c(1, 3, 2, 5, 6, 7, 4)],
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = NULL,
-                                  multiple = TRUE
-                                )
-                              ) |> 
-                              bs_append(
-                                title = "Spol",
-                                content = pickerInput(
-                                  inputId = "Spol", label = "Izberi spol študentov_k:",
-                                  choices = unique(dat$Spol),
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = "Ž",
-                                  multiple = TRUE
-                                )
-                              ) |> 
-                              bs_append(
-                                title = "Državljanstvo",
-                                content = pickerInput(
-                                  inputId = "Državljanstvo", label = "Izberi državljanstvo študentov_k:",
-                                  choices = as.vector(unique(dat$Državljanstvo)[order(unique(dat$Državljanstvo))]),
-                                  options = list(`actions-box` = TRUE,
-                                                 `deselect-all-text` = "Ne izberi nobene možnosti",
-                                                 `select-all-text` = "Izberi Vse",
-                                                 `none-selected-text` = "Skupaj",
-                                                 `all-selected-text` = "Vse"
-                                                 ),
-                                  selected = "SLOVENIJA",
-                                  multiple = TRUE
-                                )
-                              ) 
+                              )
                             
                           ))),
                           div(style = "height:50px"),
@@ -246,56 +317,107 @@ ui <- navbarPage(#includeScript("code.js"),
                           wellPanel(
                             includeScript("js4checkbox.js"),
                             fluidRow(
-                              column(6, radioButtons("var1", label="Izberi osnovno kategorično spremenljivko za izris grafa (x os).",
-                                               choices = plotVec,
-                                               selected = "Kratica"
+                              column(6, radioButtons("var1", 
+                                                     label = div("Izberi osnovno kategorično spremenljivko za izris grafa (x os).", br(), br()),
+                                                     choices = plotVec,
+                                                     selected = "Kratica"
                             )),
-                            column(6, checkboxGroupInput("var2", label="Opcijsko: Izberi dodatno kategorično spremenljivko za izris grafa (legenda - barve).",
-                                               choices = setdiff(plotVec, "Kratica"),
-                                               selected = NULL
+                            column(6, checkboxGroupInput("var2", 
+                                                         label=div(strong("Opcijsko:"), "Izberi dodatno spremenljivko (legenda - barve).", br(), br()),
+                                                         choices = setdiff(plotVec, "Kratica"),
+                                                         selected = NULL
                             ))
                           )),
                           (plotly::plotlyOutput("mygraph1"))
                  ), fluid = F)
 
 
-server <- function(input, output){
+server <- function(input, output, session){
+  
+  
+  output$Prog <- reactive({
+    ProgNeeded <- !is.null(input$Članica)
+    return(ProgNeeded)
+  })
+  
+  output$Clen <- reactive({
+    ClenNeeded <- !is.null(input$Program)
+    return(ClenNeeded)
+  })
+  
+  lapply(c("Prog", "Clen"),
+         function(x) outputOptions(output, x, suspendWhenHidden = FALSE)
+  )
+  
+  observe({updatePickerInput(session, 
+                             inputId="Program", 
+                             choices = setNames(
+                               lapply(
+                                 input$Članica, 
+                                 function(x) lapply(sort(unique(dat[Članica == x, Program])), identity)
+                                ), input$Članica
+                               ),
+                             
+                             options = list(`actions-box` = TRUE,
+                                            `deselect-all-text` = "Ne izberi nobene možnosti",
+                                            `select-all-text` = "Izberi Vse",
+                                            `none-selected-text` = "Skupaj",
+                                            `all-selected-text` = "Vse"
+                             ),
+                             selected = NULL
+                             )
+    })
+  
+  
+  observe({updatePickerInput(session, 
+                             inputId="Členitev", 
+                             choices = setNames(
+                               lapply(
+                                 input$Program, 
+                                 function(x) lapply(sort(unique(dat[Program == x, Členitev])), identity)
+                               ), input$Program
+                             ),
+                             
+                             options = list(`actions-box` = TRUE,
+                                            `deselect-all-text` = "Ne izberi nobene možnosti",
+                                            `select-all-text` = "Izberi Vse",
+                                            `none-selected-text` = "Skupaj",
+                                            `all-selected-text` = "Vse"
+                             ),
+                             selected = NULL
+                             )
+  })
   
   output$mytable1 <- DT::renderDataTable({
     
     by_vars <- vector()
     fltrs <- setNames(vector("list", length(tabVec)),
-                       names(tabVec))
+                       tabVec)
 
-    for (var_nm in names(tabVec)){
+    for (var_nm in tabVec){
 
       var_val <- input[[var_nm]]
 
       if (!is.null(var_val) && any(var_val == "Vse")){
         
-        by_vars <- c(by_vars, tabVec[[var_nm]])
+        by_vars <- c(by_vars, var_nm)
         
       } else if ((!is.null(var_val) && any(var_val == "Skupaj")) || (is.null(var_val))){
 
-        fltrs[[var_nm]] <- as.vector(unique(dat[[tabVec[[var_nm]]]]))
+        fltrs[[var_nm]] <- as.vector(unique(dat[[var_nm]]))
         
       } else {
         
-        by_vars <- c(by_vars, tabVec[[var_nm]])
+        by_vars <- c(by_vars, var_nm)
         fltrs[[var_nm]] <- var_val
         
       }
 
     }
-    
 
-    if (!is.null(input$PČ)){
-      by_vars <- c(by_vars, input$PČ)
-    } 
-
-    DT::datatable(dat[(Članica %in% c(fltrs$Članica, fltrs$PČ) |
-                        Program %in% fltrs$Program |
-                        Členitev %in% fltrs$Členitev) &
+    DT::datatable(dat[Članica %in% fltrs$Članica &
+                        Program %in% fltrs$Program &
+                        Členitev %in% fltrs$Členitev &
                         Spol %in% fltrs$Spol &
                         Stopnja %in% fltrs$Stopnja &
                         Način %in% fltrs$Način &
@@ -332,7 +454,7 @@ server <- function(input, output){
     if ("Stopnja" %in% colnames(dat_plot)){
       
       dat_plot$Stopnja <- factor(dat_plot$Stopnja,
-                                         unique(dat$Stopnja))
+                                 unique(dat$Stopnja))
       
     } 
     
